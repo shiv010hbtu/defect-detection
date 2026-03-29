@@ -1,0 +1,379 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Surface Defect Detection System</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #0f1117;
+      color: #e0e0e0;
+      min-height: 100vh;
+    }
+
+    header {
+      background: #1a1d27;
+      padding: 18px 32px;
+      border-bottom: 1px solid #2a2d3a;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    header h1 { font-size: 1.3rem; color: #fff; }
+    header span { font-size: 0.8rem; color: #888; background: #2a2d3a; padding: 3px 10px; border-radius: 20px; }
+
+    .main { max-width: 1100px; margin: 30px auto; padding: 0 20px; }
+
+    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; }
+
+    .card {
+      background: #1a1d27;
+      border: 1px solid #2a2d3a;
+      border-radius: 12px;
+      padding: 24px;
+    }
+
+    .card h2 { font-size: 1rem; color: #aaa; margin-bottom: 16px; text-transform: uppercase; letter-spacing: 0.5px; }
+
+    .upload-zone {
+      border: 2px dashed #3a3d4a;
+      border-radius: 10px;
+      padding: 40px 20px;
+      text-align: center;
+      cursor: pointer;
+      transition: border-color 0.2s;
+    }
+
+    .upload-zone:hover { border-color: #6c63ff; }
+    .upload-zone p { color: #666; font-size: 0.9rem; margin-top: 8px; }
+    .upload-zone .icon { font-size: 2.5rem; }
+
+    input[type="file"] { display: none; }
+
+    #preview-img {
+      width: 100%;
+      border-radius: 8px;
+      margin-top: 14px;
+      display: none;
+      max-height: 240px;
+      object-fit: contain;
+    }
+
+    .btn {
+      width: 100%;
+      margin-top: 16px;
+      padding: 12px;
+      background: #6c63ff;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      font-size: 1rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    .btn:hover { background: #574fd6; }
+    .btn:disabled { background: #444; cursor: not-allowed; }
+
+    .result-box { display: none; }
+
+    .severity-badge {
+      display: inline-block;
+      padding: 6px 18px;
+      border-radius: 20px;
+      font-size: 1rem;
+      font-weight: bold;
+      margin-bottom: 16px;
+    }
+
+    .severity-None  { background: #1a3a2a; color: #4caf50; }
+    .severity-Low   { background: #2a3a1a; color: #8bc34a; }
+    .severity-Medium{ background: #3a2e1a; color: #ff9800; }
+    .severity-High  { background: #3a1a1a; color: #f44336; }
+
+    .anomaly-tag {
+      display: inline-block;
+      padding: 4px 12px;
+      border-radius: 12px;
+      font-size: 0.78rem;
+      margin-left: 8px;
+      vertical-align: middle;
+    }
+
+    .anomaly-yes { background: #3a1a1a; color: #f44336; }
+    .anomaly-no  { background: #1a2a3a; color: #64b5f6; }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      margin-top: 14px;
+    }
+
+    .stat {
+      background: #0f1117;
+      border: 1px solid #2a2d3a;
+      border-radius: 8px;
+      padding: 12px 14px;
+    }
+
+    .stat label { font-size: 0.72rem; color: #888; text-transform: uppercase; }
+    .stat span { display: block; font-size: 1.1rem; color: #fff; font-weight: 600; margin-top: 4px; }
+
+    .result-img {
+      width: 100%;
+      border-radius: 8px;
+      margin-top: 12px;
+      max-height: 220px;
+      object-fit: contain;
+      display: none;
+    }
+
+    .loader {
+      text-align: center;
+      padding: 20px;
+      color: #888;
+      display: none;
+    }
+
+    .loader span {
+      display: inline-block;
+      width: 8px; height: 8px;
+      background: #6c63ff;
+      border-radius: 50%;
+      margin: 0 3px;
+      animation: bounce 0.8s infinite alternate;
+    }
+
+    .loader span:nth-child(2) { animation-delay: 0.2s; }
+    .loader span:nth-child(3) { animation-delay: 0.4s; }
+
+    @keyframes bounce {
+      to { transform: translateY(-8px); opacity: 0.4; }
+    }
+
+    /* History Table */
+    .history-section { margin-top: 28px; }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.85rem;
+    }
+
+    th {
+      text-align: left;
+      padding: 10px 12px;
+      color: #888;
+      border-bottom: 1px solid #2a2d3a;
+      font-weight: 500;
+    }
+
+    td {
+      padding: 10px 12px;
+      border-bottom: 1px solid #1e2130;
+      color: #ccc;
+    }
+
+    tr:hover td { background: #1e2130; }
+
+    .clear-btn {
+      float: right;
+      padding: 6px 16px;
+      background: #2a2d3a;
+      color: #aaa;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 0.82rem;
+    }
+
+    .clear-btn:hover { background: #3a1a1a; color: #f44336; }
+
+    .no-history { color: #555; font-size: 0.9rem; padding: 16px 0; }
+  </style>
+</head>
+<body>
+
+<header>
+  <h1>⚙️ Surface Defect Detection System</h1>
+  <span>FastAPI + OpenCV + Scikit-learn</span>
+</header>
+
+<div class="main">
+  <div class="grid">
+
+    <!-- Upload Card -->
+    <div class="card">
+      <h2>Upload Image</h2>
+      <div class="upload-zone" onclick="document.getElementById('fileInput').click()">
+        <div class="icon">📷</div>
+        <p>Click to upload or drag & drop</p>
+        <p>PNG, JPG, JPEG supported</p>
+      </div>
+      <input type="file" id="fileInput" accept="image/*" onchange="previewImage(event)" />
+      <img id="preview-img" alt="Preview" />
+      <button class="btn" id="analyzeBtn" onclick="analyzeImage()" disabled>
+        🔍 Analyze for Defects
+      </button>
+    </div>
+
+    <!-- Result Card -->
+    <div class="card">
+      <h2>Inspection Result</h2>
+
+      <div class="loader" id="loader">
+        <span></span><span></span><span></span>
+        <p style="margin-top:10px">Analyzing image...</p>
+      </div>
+
+      <div class="result-box" id="result-box">
+        <div>
+          <span class="severity-badge" id="severity-badge">—</span>
+          <span class="anomaly-tag" id="anomaly-tag">—</span>
+        </div>
+
+        <div class="stats-grid">
+          <div class="stat">
+            <label>Defects Found</label>
+            <span id="defect-count">—</span>
+          </div>
+          <div class="stat">
+            <label>Confidence</label>
+            <span id="confidence">—</span>
+          </div>
+          <div class="stat">
+            <label>Defect Coverage</label>
+            <span id="defect-ratio">—</span>
+          </div>
+          <div class="stat">
+            <label>Std Intensity</label>
+            <span id="std-intensity">—</span>
+          </div>
+        </div>
+
+        <img id="result-img" alt="Analyzed" class="result-img" />
+      </div>
+
+      <div id="placeholder" style="color:#444; font-size:0.9rem; padding: 20px 0;">
+        Upload an image to start inspection...
+      </div>
+    </div>
+
+  </div>
+
+  <!-- History Section -->
+  <div class="card history-section">
+    <h2>
+      Inspection History
+      <button class="clear-btn" onclick="clearHistory()">🗑 Clear</button>
+    </h2>
+
+    {% if history %}
+    <table>
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Filename</th>
+          <th>Severity</th>
+          <th>Defects</th>
+          <th>Confidence</th>
+          <th>Anomaly</th>
+          <th>Time</th>
+        </tr>
+      </thead>
+      <tbody id="history-body">
+        {% for row in history %}
+        <tr>
+          <td>{{ row.id }}</td>
+          <td>{{ row.filename }}</td>
+          <td>{{ row.severity }}</td>
+          <td>{{ row.defect_count }}</td>
+          <td>{{ "%.0f"|format(row.confidence * 100) }}%</td>
+          <td>{{ "⚠ Yes" if row.is_anomaly else "✓ No" }}</td>
+          <td>{{ row.inspected_at }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p class="no-history">No inspections yet.</p>
+    {% endif %}
+  </div>
+
+</div>
+
+<script>
+  let selectedFile = null;
+
+  function previewImage(event) {
+    selectedFile = event.target.files[0];
+    if (!selectedFile) return;
+    const reader = new FileReader();
+    reader.onload = e => {
+      const img = document.getElementById('preview-img');
+      img.src = e.target.result;
+      img.style.display = 'block';
+    };
+    reader.readAsDataURL(selectedFile);
+    document.getElementById('analyzeBtn').disabled = false;
+  }
+
+  async function analyzeImage() {
+    if (!selectedFile) return;
+
+    document.getElementById('loader').style.display = 'block';
+    document.getElementById('result-box').style.display = 'none';
+    document.getElementById('placeholder').style.display = 'none';
+    document.getElementById('analyzeBtn').disabled = true;
+
+    const formData = new FormData();
+    formData.append('file', selectedFile);
+
+    try {
+      const res = await fetch('/analyze', { method: 'POST', body: formData });
+      const data = await res.json();
+
+      document.getElementById('loader').style.display = 'none';
+      document.getElementById('result-box').style.display = 'block';
+
+      const badge = document.getElementById('severity-badge');
+      badge.textContent = `Severity: ${data.severity}`;
+      badge.className = `severity-badge severity-${data.severity}`;
+
+      const anomalyTag = document.getElementById('anomaly-tag');
+      anomalyTag.textContent = data.is_anomaly ? '⚠ Anomaly Detected' : '✓ Normal Pattern';
+      anomalyTag.className = `anomaly-tag ${data.is_anomaly ? 'anomaly-yes' : 'anomaly-no'}`;
+
+      document.getElementById('defect-count').textContent = data.defect_count;
+      document.getElementById('confidence').textContent = `${(data.confidence * 100).toFixed(0)}%`;
+      document.getElementById('defect-ratio').textContent = `${data.defect_ratio}%`;
+      document.getElementById('std-intensity').textContent = data.std_intensity;
+
+      const resultImg = document.getElementById('result-img');
+      resultImg.src = data.image_url;
+      resultImg.style.display = 'block';
+
+      // refresh history after 800ms
+      setTimeout(() => location.reload(), 900);
+
+    } catch (err) {
+      document.getElementById('loader').style.display = 'none';
+      alert('Error analyzing image. Check console.');
+      console.error(err);
+      document.getElementById('analyzeBtn').disabled = false;
+    }
+  }
+
+  async function clearHistory() {
+    await fetch('/history', { method: 'DELETE' });
+    location.reload();
+  }
+</script>
+
+</body>
+</html>
